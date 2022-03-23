@@ -19,3 +19,8 @@ type fingerprint []string
 func Fingerprint(print ...string) interface{} {
 	return fingerprint(print)
 }
+
+// NoExceptionCleanup is an argument which, when passed on a glog event,
+// signifies that the exception tracebacks should not be cleaned up
+// and deduplicated.
+type NoExceptionCleanupArg struct{}

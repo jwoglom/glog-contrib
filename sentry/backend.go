@@ -62,6 +62,7 @@ func CaptureErrors(project string, dsns []string, opts sentry.ClientOptions, com
 	if len(dsns) == 0 {
 		panic("must specify at least one Sentry DSN")
 	}
+	glog.Infof("running in local")
 
 	hubs := make(map[string]*sentry.Hub)
 	var primaryHub *sentry.Hub
@@ -92,7 +93,7 @@ func CaptureErrors(project string, dsns []string, opts sentry.ClientOptions, com
 	// (which should only happen on app exit)
 	for glogEvent := range comm {
 		if glogEvent.Severity == "ERROR" {
-			e, targetDsn := FromGlogEvent(glogEvent)
+			e, targetDsn := FromGlogEvent(glogEvent, true)
 			if hub, ok := hubs[targetDsn]; ok {
 				hub.CaptureEvent(e)
 			} else {
@@ -129,7 +130,9 @@ func buildFingerprint(exceptions []sentry.Exception) []string {
 // FromGlogEvent processes a glog event and generates a corresponding Sentry event.
 // This includes building the stacktrace, cleaning up the error title and subtitle,
 // and identifying whether any TargetDSN or Fingerprint overrides were set.
-func FromGlogEvent(e glog.Event) (*sentry.Event, string) {
+// If exceptionDedup is true, then the exception objects and their stacktraces
+// are deduplicated and merged.
+func FromGlogEvent(e glog.Event, exceptionDedup bool) (*sentry.Event, string) {
 	targetDsn := ""
 
 	s := sentry.NewEvent()
@@ -232,6 +235,10 @@ func FromGlogEvent(e glog.Event) (*sentry.Event, string) {
 
 	// Reverse the order of the Exception array
 	reverse(s.Exception)
+
+	if exceptionDedup {
+		s.Exception = DedupExceptions(s.Exception)
+	}
 
 	// Set the fingerprint based on the stack trace, if option is specified.
 	// This overrides logic in Sentry which will take the specific error

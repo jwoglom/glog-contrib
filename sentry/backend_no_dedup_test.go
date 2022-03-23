@@ -12,12 +12,12 @@ import (
 	"github.com/yext/yerrors"
 )
 
-func TestGlogSimpleEvent(t *testing.T) {
-	methodName := "TestGlogSimpleEvent" // this should stay in sync with the name of the method
+func TestGlogSimpleEventNoDedup(t *testing.T) {
+	methodName := "TestGlogSimpleEventNoDedup" // this should stay in sync with the name of the method
 
 	ready := make(chan interface{})
 	done := make(chan *sentrygo.Event)
-	go setup(ready, done, 1, true)
+	go setup(ready, done, 1, false)
 
 	<-ready
 	errorLine := 1 + currentLine() // this should point to the next line
@@ -44,12 +44,12 @@ func TestGlogSimpleEvent(t *testing.T) {
 	assert.True(t, fr.InApp, "inapp flag true")
 }
 
-func TestGlogErrorfEvent(t *testing.T) {
-	methodName := "TestGlogErrorfEvent" // this should stay in sync with the name of the method
+func TestGlogErrorfEventNoDedup(t *testing.T) {
+	methodName := "TestGlogErrorfEventNoDedup" // this should stay in sync with the name of the method
 
 	ready := make(chan interface{})
 	done := make(chan *sentrygo.Event)
-	go setup(ready, done, 1, true)
+	go setup(ready, done, 1, false)
 
 	<-ready
 	errorLine := 1 + currentLine() // this should point to the next line
@@ -79,12 +79,12 @@ func TestGlogErrorfEvent(t *testing.T) {
 	assert.True(t, fr.InApp, "inapp flag true")
 }
 
-func TestGlogRawErrorEvent(t *testing.T) {
-	methodName := "TestGlogRawErrorEvent" // this should stay in sync with the name of the method
+func TestGlogRawErrorEventNoDedup(t *testing.T) {
+	methodName := "TestGlogRawErrorEventNoDedup" // this should stay in sync with the name of the method
 
 	ready := make(chan interface{})
 	done := make(chan *sentrygo.Event)
-	go setup(ready, done, 1, true)
+	go setup(ready, done, 1, false)
 
 	<-ready
 	// We cannot track where the raw error occurred because it uses a raw error type
@@ -96,9 +96,9 @@ func TestGlogRawErrorEvent(t *testing.T) {
 	assert.NotNil(t, e)
 	assert.Equal(t, sentrygo.LevelError, e.Level, "level is error")
 	assert.Equal(t, "test message", e.Message, "message matches exactly")
-	assert.Len(t, e.Exception, 1, "one exception")
+	assert.Len(t, e.Exception, 2, "two exceptions (first is from glog, second is from the raw err)")
 
-	ex := e.Exception[0] // the first exception, merged from the glog invocation and raw error
+	ex := e.Exception[0] // the first exception is from the glog invocation
 	assert.Equal(t, "test message", ex.Type,
 		"type (primary issue title) matches the error string exactly")
 	assert.True(t, strings.HasPrefix(ex.Value, fmt.Sprintf("%s:%d", methodName, errorLine)),
@@ -111,14 +111,21 @@ func TestGlogRawErrorEvent(t *testing.T) {
 	assert.Equal(t, errorLine, fr.Lineno, "line number matches of the glog invocation")
 	assert.True(t, strings.HasSuffix(fr.AbsPath, fileNameSuffix), "abspath matches: "+fr.AbsPath)
 	assert.True(t, fr.InApp, "inapp flag true")
+
+	ex = e.Exception[1] // the second exception is from the raw error
+	assert.Equal(t, "test message", ex.Type,
+		"type (primary issue title) matches the error string exactly")
+	assert.Empty(t, ex.Value, "value of raw error is empty")
+	// the raw error has no stacktrace or stack frames
+	assert.Nil(t, ex.Stacktrace, "stacktrace of raw error is nil")
 }
 
-func TestGlogRawErrorEventWithColon(t *testing.T) {
-	methodName := "TestGlogRawErrorEventWithColon" // this should stay in sync with the name of the method
+func TestGlogRawErrorEventWithColonNoDedup(t *testing.T) {
+	methodName := "TestGlogRawErrorEventWithColonNoDedup" // this should stay in sync with the name of the method
 
 	ready := make(chan interface{})
 	done := make(chan *sentrygo.Event)
-	go setup(ready, done, 1, true)
+	go setup(ready, done, 1, false)
 
 	<-ready
 	// We cannot track where the raw error occurred because it uses a raw error type
@@ -156,12 +163,12 @@ func TestGlogRawErrorEventWithColon(t *testing.T) {
 	assert.Nil(t, ex.Stacktrace, "stacktrace of raw error is nil")
 }
 
-func TestGlogYerrorsEvent(t *testing.T) {
-	methodName := "TestGlogYerrorsEvent" // this should stay in sync with the name of the method
+func TestGlogYerrorsEventNoDedup(t *testing.T) {
+	methodName := "TestGlogYerrorsEventNoDedup" // this should stay in sync with the name of the method
 
 	ready := make(chan interface{})
 	done := make(chan *sentrygo.Event)
-	go setup(ready, done, 1, true)
+	go setup(ready, done, 1, false)
 
 	<-ready
 	errorLine := 1 + currentLine() // this should point to the next line
@@ -204,12 +211,12 @@ func TestGlogYerrorsEvent(t *testing.T) {
 	}
 }
 
-func TestGlogYerrorsEventWithColon(t *testing.T) {
-	methodName := "TestGlogYerrorsEventWithColon" // this should stay in sync with the name of the method
+func TestGlogYerrorsEventWithColonNoDedup(t *testing.T) {
+	methodName := "TestGlogYerrorsEventWithColonNoDedup" // this should stay in sync with the name of the method
 
 	ready := make(chan interface{})
 	done := make(chan *sentrygo.Event)
-	go setup(ready, done, 1, true)
+	go setup(ready, done, 1, false)
 
 	<-ready
 	errorLine := 1 + currentLine() // this should point to the next line
@@ -256,12 +263,12 @@ func TestGlogYerrorsEventWithColon(t *testing.T) {
 	}
 }
 
-func TestGlogYerrorsWrappedEvent(t *testing.T) {
-	methodName := "TestGlogYerrorsWrappedEvent" // this should stay in sync with the name of the method
+func TestGlogYerrorsWrappedEventNoDedup(t *testing.T) {
+	methodName := "TestGlogYerrorsWrappedEventNoDedup" // this should stay in sync with the name of the method
 
 	ready := make(chan interface{})
 	done := make(chan *sentrygo.Event)
-	go setup(ready, done, 1, true)
+	go setup(ready, done, 1, false)
 
 	<-ready
 	errorLine := 1 + currentLine() // this should point to the next line
